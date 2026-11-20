@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Room · Rádio do Clube</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:'Poppins',system-ui,sans-serif;background:linear-gradient(135deg,#b02ee0,#2a4fff 55%,#1fb5b0) fixed;min-height:100vh;padding:20px;color:#fff}
+.wrap{max-width:760px;margin:0 auto;display:grid;gap:16px}
+.g{padding:20px;border-radius:26px;background:linear-gradient(135deg,rgba(255,255,255,.3),rgba(255,255,255,.08));backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 16px 48px rgba(0,0,0,.25)}
+h1{font-size:24px;font-weight:800}h2{font-size:15px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.7px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text],input[type=password]{flex:1;min-width:130px;padding:10px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.2);color:#fff;font:500 14px 'Poppins'}
+::placeholder{color:rgba(255,255,255,.7)}
+button{padding:9px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.22);color:#fff;font:600 13px 'Poppins';cursor:pointer}
+button:hover{background:rgba(255,255,255,.4)}
+button.red{background:rgba(255,40,90,.55)}
+.item{display:flex;align-items:center;gap:10px;padding:8px;border-radius:16px;margin-top:6px;background:rgba(255,255,255,.12)}
+.item.cur{background:rgba(255,255,255,.32)}
+.item img,.item i{width:44px;height:44px;border-radius:10px;object-fit:cover;background:rgba(0,0,0,.25);flex:none}
+.item div{flex:1;min-width:0;font-size:14px;font-weight:600}.item small{display:block;font-weight:500;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item button{padding:6px 10px}
+#msg{font-size:13px;min-height:18px;margin-top:8px}
+[hidden]{display:none!important}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<div class="wrap" id="login" hidden><div class="g"><h2>Entrar no Control Room</h2><div class="row"><input type="text" id="em" placeholder="E-mail" autocomplete="username"><input type="password" id="pw" placeholder="Senha" autocomplete="current-password"><button onclick="login()">Entrar</button></div><p id="lmsg" style="font-size:13px;margin-top:8px;min-height:18px"></p></div></div>
+<div class="wrap" id="app" hidden>
+  <div class="g row" style="justify-content:space-between"><h1>🎛 Control Room</h1><span><span id="stat">…</span> <button onclick="sb.auth.signOut()">Sair</button></span></div>
+  <div class="g">
+    <h2>Rádio</h2>
+    <div class="row">
+      <button onclick="cmd({cmd:'start'})">▶ Iniciar</button>
+      <button class="red" onclick="cmd({cmd:'stop'})">■ Parar rádio</button>
+      <button onclick="cmd({cmd:'prev'})">⏮</button><button onclick="cmd({cmd:'next'})">⏭ Pular</button>
+    </div>
+    <p style="margin-top:12px;font-size:14px">Agora: <b id="now">—</b> · 👥 <b id="cnt">0</b> ouvindo</p>
+  </div>
+  <div class="g">
+    <h2>Adicionar música</h2>
+    <div class="row"><input type="text" id="url" placeholder="Link do YouTube, Spotify ou áudio direto"></div>
+    <div class="row" style="margin-top:8px"><input type="text" id="ttl" placeholder="Título (opcional)"><input type="text" id="art" placeholder="Artista (opcional)"><button onclick="addLink()">Adicionar link</button></div>
+    <div class="row" style="margin-top:8px"><input type="file" id="file" accept="audio/*" style="flex:1"><button onclick="addFile()">Enviar arquivo</button></div>
+    <p id="msg"></p>
+  </div>
+  <div class="g"><h2>Playlist (<span id="n">0</span>)</h2><div id="list"></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const sb=supabase.createClient(SUPABASE.url,SUPABASE.key);
+let P=[],row={},cnt=0,ready=false;
+const msg=(t,err)=>{$('msg').textContent=t;$('msg').style.color=err?'#ffd0d8':'#fff'};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function run(p){const r=await p;if(r&&r.error){msg(r.error.message,1);return false}msg('');return true}
+
+async function login(){
+  const {error}=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
+  $('lmsg').textContent=error?'E-mail ou senha incorretos.':'';
+}
+$('pw').addEventListener('keydown',e=>e.key==='Enter'&&login());
+sb.auth.onAuthStateChange((_e,s)=>{
+  $('login').hidden=!!s;$('app').hidden=!s;
+  if(s&&!ready){ready=true;start()}
+});
+
+const ci=()=>P.findIndex(x=>x.id===row.current_id);
+const go=i=>{const n=P.length;return n?run(sb.rpc('radio_go',{p_id:P[((i%n)+n)%n].id})):false};
+async function cmd(o){
+  switch(o.cmd){
+    case 'start':await go(Math.max(0,ci()));break;
+    case 'stop':await run(sb.rpc('radio_stop'));break;
+    case 'next':await go(ci()+1);break;
+    case 'prev':await go(ci()-1);break;
+    case 'play':await go(Number(o.index));break;
+    case 'move':{
+      const i=P.findIndex(x=>x.id===o.id),j=i+Number(o.dir);
+      if(i<0||j<0||j>=P.length)break;
+      const a=P[i],b=P[j];
+      await run(Promise.all([sb.from('playlist').update({position:b.position}).eq('id',a.id),sb.from('playlist').update({position:a.position}).eq('id',b.id)]).then(r=>r.find(x=>x.error)||{}));
+      break;
+    }
+    case 'remove':{
+      const i=P.findIndex(x=>x.id===o.id),t=P[i];if(!t)break;
+      if(row.playing&&t.id===row.current_id){P.length>1?await go(i+1):await run(sb.rpc('radio_stop'))}
+      if(await run(sb.from('playlist').delete().eq('id',t.id))&&t.kind==='file'&&t.ref)sb.storage.from('radio').remove([t.ref]);
+      break;
+    }
+  }
+  load();
+}
+
+async function oembed(u){try{return await (await fetch(u)).json()}catch{return{}}}
+async function meta(url){
+  let m;
+  if((m=url.match(/(?:youtu\.be\/|[?&]v=|shorts\/)([\w-]{11})/))){
+    const id=m[1],link='https://www.youtube.com/watch?v='+id;
+    const o=await oembed('https://www.youtube.com/oembed?format=json&url='+encodeURIComponent(link));
+    return{kind:'youtube',ref:id,link,title:o.title,artist:o.author_name,cover:o.thumbnail_url||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`};
+  }
+  if((m=url.match(/open\.spotify\.com\/(?:intl-\w+\/)?(track|episode)\/(\w+)/))){
+    const link=`https://open.spotify.com/${m[1]}/${m[2]}`;
+    const o=await oembed('https://open.spotify.com/oembed?url='+encodeURIComponent(link));
+    return{kind:'spotify',ref:`spotify:${m[1]}:${m[2]}`,link,title:o.title,cover:o.thumbnail_url};
+  }
+  if(/^https?:\/\/.+\.(mp3|ogg|wav|m4a|aac)(\?|$)/i.test(url))return{kind:'file',src:url,link:url,title:url.split('/').pop().split('?')[0]};
+  throw new Error('Link não reconhecido. Use música do YouTube, do Spotify ou link direto de áudio.');
+}
+async function insert(t){
+  const position=P.length?Math.max(...P.map(x=>x.position))+1:1;
+  const ok=await run(sb.from('playlist').insert({...t,title:$('ttl').value||t.title||'Sem título',artist:$('art').value||t.artist||'',position}));
+  if(ok){$('ttl').value=$('art').value='';load()}
+  return ok;
+}
+async function addLink(){
+  const u=$('url').value.trim();if(!u)return msg('Cole um link.',1);msg('Adicionando…');
+  let t;try{t=await meta(u)}catch(e){return msg(e.message,1)}
+  if(await insert(t))$('url').value='';
+}
+async function addFile(){
+  const f=$('file').files[0];if(!f)return msg('Escolha um arquivo de áudio.',1);msg('Enviando…');
+  const ref=crypto.randomUUID()+(f.name.match(/\.\w+$/)||[''])[0];
+  const up=await sb.storage.from('radio').upload(ref,f,{contentType:f.type});
+  if(up.error)return msg(up.error.message,1);
+  const src=sb.storage.from('radio').getPublicUrl(ref).data.publicUrl;
+  if(await insert({kind:'file',src,ref,title:f.name.replace(/\.\w+$/,'')}))$('file').value='';
+}
+
+function render(){
+  const cur=P.find(x=>x.id===row.current_id),playing=!!row.playing&&!!cur;
+  $('stat').textContent=playing?'🟢 No ar':'🔴 Parada';$('cnt').textContent=cnt;
+  $('now').textContent=playing?cur.title:'—';$('n').textContent=P.length;
+  $('list').innerHTML=P.map((t,i)=>`<div class="item ${playing&&t.id===cur.id?'cur':''}">
+    ${t.cover?`<img src="${esc(t.cover)}" alt="">`:'<i></i>'}
+    <div>${esc(t.title)}<small>${esc(t.artist||'')} · ${t.kind}</small></div>
+    <button onclick="cmd({cmd:'play',index:${i}})">▶</button>
+    <button onclick="cmd({cmd:'move',id:'${t.id}',dir:-1})">↑</button>
+    <button onclick="cmd({cmd:'move',id:'${t.id}',dir:1})">↓</button>
+    <button class="red" onclick="cmd({cmd:'remove',id:'${t.id}'})">✕</button></div>`).join('')||'<p style="opacity:.85;font-size:14px">Playlist vazia.</p>';
+}
+async function load(){
+  const [a,b]=await Promise.all([sb.from('playlist').select('*').order('position'),sb.from('radio_state').select('*').eq('id',1).single()]);
+  if(a.data)P=a.data;if(b.data)row=b.data;render();
+}
+function start(){
+  load();
+  sb.channel('db').on('postgres_changes',{event:'*',schema:'public',table:'radio_state'},()=>load()).on('postgres_changes',{event:'*',schema:'public',table:'playlist'},()=>load()).subscribe();
+  const pr=sb.channel('presence');
+  pr.on('presence',{event:'sync'},()=>{cnt=Object.keys(pr.presenceState()).length;render()}).subscribe();
+  setInterval(load,30000);
+}
+</script>
+</body>
+</html>

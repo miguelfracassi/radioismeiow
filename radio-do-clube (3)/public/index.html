@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rádio do Clube</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" id="fav">
+<meta name="theme-color" content="#ff4f81">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}
+body{font-family:'Fredoka',system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px;overflow:hidden;color:#fff;background:#ff4f81}
+.bg{position:fixed;inset:0;display:flex;z-index:-2}
+.col{container-type:inline-size;padding-top:3vh;text-align:center;overflow:hidden}
+.col b{display:block;font:600 34cqw/1.02 'Fredoka',sans-serif;color:#fff;letter-spacing:-.02em}
+.col b.o{color:transparent;-webkit-text-stroke:max(1.5px,.6cqw) #fff}
+.col b.f{opacity:.4}
+.col svg{width:40cqw;display:block;margin:7cqw auto 8cqw}
+.phone{position:fixed;z-index:-1;width:230px;height:470px;bottom:-120px;border:8px solid #0e0e13;border-radius:40px;padding:62px 20px 0;box-shadow:0 30px 60px rgba(0,0,0,.3);text-align:left}
+.phone.l{left:calc(50% - 430px);transform:rotate(-9deg);background:#f0457a}
+.phone.r{right:calc(50% - 430px);transform:rotate(9deg);background:#2a4cff}
+.disc{width:130px;height:130px;border-radius:50%;margin:0 auto 18px;border:5px solid rgba(255,255,255,.85);background:#fff3 }
+.phone.r .disc{background:#10122b}
+.phone p{font-weight:600;font-size:17px}.phone small{opacity:.85}
+.phone .bar{height:4px;border-radius:4px;background:#fff5;margin-top:18px}.phone .bar u{display:block;width:45%;height:100%;border-radius:4px;background:#fff}
+.card{position:relative;width:min(430px,100%);padding:26px 26px 24px;border-radius:34px;text-align:center;
+ background:rgba(255,255,255,.2);
+ backdrop-filter:blur(18px) saturate(170%);-webkit-backdrop-filter:blur(18px) saturate(170%);
+ border:1px solid rgba(255,255,255,.55);
+ box-shadow:inset 0 1px 1px rgba(255,255,255,.9),inset 0 -8px 18px rgba(255,255,255,.08),0 18px 50px rgba(20,10,60,.28);
+ text-shadow:0 1px 10px rgba(0,0,0,.22)}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:500}
+.live{font-size:12px;font-weight:600;padding:3px 11px;border-radius:99px;background:rgba(0,0,0,.3)}
+.live.on{background:#fff;color:#e8265f;text-shadow:none}
+.cover{width:190px;height:190px;margin:20px auto 16px;border-radius:22px;background:#ff4f81 center/cover;box-shadow:0 12px 30px rgba(0,0,0,.3),0 0 0 3px rgba(255,255,255,.55)}
+h1{font-size:23px;font-weight:600;line-height:1.2}
+.art{margin-top:3px;font-size:16px;opacity:.92}
+.src{margin-top:10px;font-size:14px;opacity:.92}
+.row{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:16px;flex-wrap:wrap}
+.btn{padding:10px 20px;border-radius:99px;border:0;background:#fff;color:#1b1b2f;font:600 14px 'Fredoka',sans-serif;text-decoration:none;cursor:pointer;text-shadow:none}
+.btn.s{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.8);text-shadow:inherit}
+.vol{display:flex;align-items:center;gap:10px;margin:20px 4px 0}
+.vol svg{width:20px;height:20px;flex:none;fill:#fff}
+input[type=range]{flex:1;accent-color:#fff}
+.n{margin-top:16px;font-size:15px}
+#sp{position:fixed;left:-9999px;width:300px}
+#yt{position:fixed;left:-9999px;width:1px;height:1px}
+
+/* ===== interatividade ===== */
+.card{transition:transform .25s ease-out;will-change:transform}
+.col b{transition:transform .35s cubic-bezier(.2,.8,.2,1),color .3s,opacity .3s}
+.col:hover b{transform:scale(1.05)}
+.col:hover b.o{color:rgba(255,255,255,.35)}
+.phone.l{transform:translate(var(--px,0px),var(--py,0px)) rotate(-9deg)}
+.phone.r{transform:translate(var(--px,0px),var(--py,0px)) rotate(9deg)}
+.phone{transition:transform .3s ease-out}
+.cover{position:relative;transition:border-radius .8s ease,transform .3s}
+.cover::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#ff4f81;border:3px solid #fff;opacity:0;transition:opacity .6s}
+.cover.spin{border-radius:50%;animation:spin 9s linear infinite}
+.cover.spin::after{opacity:1}
+.cover:active{transform:scale(.96)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.live.on::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:#e8265f;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.7);opacity:.4}}
+.eq{display:flex;gap:4px;height:26px;align-items:flex-end;justify-content:center;margin-top:12px}
+.eq i{width:5px;height:4px;border-radius:3px;background:#fff;opacity:.55;transition:height .3s}
+.eq.on i{opacity:1;animation:eq .8s ease-in-out infinite alternate}
+@keyframes eq{from{height:4px}to{height:26px}}
+.time{margin-top:6px;font-size:13px;opacity:.85;min-height:18px;font-variant-numeric:tabular-nums}
+.btn{transition:transform .15s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.btn:active{transform:scale(.95)}
+.btn:focus-visible,input[type=range]:focus-visible,#mute:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#mute{background:none;border:0;padding:0;cursor:pointer;display:grid;place-items:center}
+#mute:hover svg{transform:scale(1.2)}#mute svg{transition:transform .15s}
+.note{position:fixed;z-index:10;pointer-events:none;font:600 26px 'Fredoka',sans-serif;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.35);animation:fly 1.6s ease-out forwards}
+@keyframes fly{from{opacity:1;transform:translate(0,0) scale(.6) rotate(0)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3) rotate(var(--r))}}
+@media(prefers-reduced-motion:reduce){.cover.spin,.eq.on i,.live.on::before,.note{animation:none}.card,.phone{transition:none}}
+@media(max-width:940px){.phone{display:none}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<div class="bg"><div class="col" style="background:#ffb400;flex:.8"><b class="o">rádio</b><b>rádio</b><b class="o f">rádio</b></div><div class="col" style="background:#ff4f81;flex:1.25"><b class="o">rádio</b><b>rádio</b><b class="o f">rádio</b></div><div class="col" style="background:#17b8ad;flex:1"><b class="o">rádio</b><span><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#fff" stroke-width="4"/><path d="M41 32l28 18-28 18z" fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></svg></span><b class="o f">rádio</b></div><div class="col" style="background:#b620e0;flex:1.1"><b class="o">rádio</b><b>rádio</b><b class="o f">rádio</b></div><div class="col" style="background:#2a4cff;flex:1"><b class="o">rádio</b><b>rádio</b><b class="o f">rádio</b></div></div><div class="phone l"><div class="disc"></div><p>no ar agora</p><small>Rádio do Clube</small><div class="bar"><u></u></div></div><div class="phone r"><div class="disc"></div><p>ao vivo</p><small>Rádio do Clube</small><div class="bar"><u></u></div></div>
+<main class="card">
+  <div class="top"><span>Faixa nesse momento</span><span class="live" id="live">Fora do ar</span></div>
+  <div class="cover" id="cover"></div>
+  <h1 id="title">Rádio do Clube</h1>
+  <p class="art" id="artist">Aguardando a próxima faixa…</p>
+  <p class="src" id="src"></p>
+  <p class="time" id="time"></p>
+  <div class="eq" id="eq" aria-hidden="true"></div>
+  <div class="row"><button class="btn" id="listen">Ouvir ao vivo</button><a class="btn s" id="link" target="_blank" rel="noopener" style="display:none">Abrir música</a></div>
+  <div class="vol"><button id="mute" aria-label="Silenciar"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/></svg></button><input type="range" id="vol" min="0" max="100" value="80" aria-label="Volume"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg></div>
+  <p class="n"><b id="count">0</b> <span id="cw">pessoas ouvindo agora</span></p>
+</main>
+<div id="yt"></div><div id="sp"></div>
+<script>
+const $=id=>document.getElementById(id);
+const sb=supabase.createClient(SUPABASE.url,SUPABASE.key);
+let st={playing:false,track:null,listeners:0},playlist=[],row={},cnt=0,offset=0,key=null,on=false,vol=.8,yt=null,spCtl=null,spApi=null,spDone=null;
+try{vol=+localStorage.getItem('vol')||.8;$('vol').value=vol*100}catch{}
+const au=new Audio();au.onended=()=>end();
+const end=()=>{const t=st.track;if(t)sb.rpc('advance',{expected:t.id}).then(()=>{})};
+const KIND={youtube:'YouTube',spotify:'Spotify',file:'Arquivo da rádio'};
+
+function build(){
+  const t=playlist.find(x=>x.id===row.current_id)||null;
+  const sa=row.started_at?new Date(row.started_at).getTime():0;
+  st={playing:!!row.playing&&!!t,track:t,startedAt:sa,pos:Math.max(0,(Date.now()+offset-sa)/1000),listeners:cnt};
+}
+const refresh=()=>{build();render();if(on)sync()};
+async function load(){
+  const [a,b]=await Promise.all([sb.from('playlist').select('*').order('position'),sb.from('radio_state').select('*').eq('id',1).single()]);
+  if(a.data)playlist=a.data;if(b.data)row=b.data;refresh();
+}
+(async()=>{
+  try{const t0=Date.now(),{data}=await sb.rpc('server_time');offset=new Date(data).getTime()-(t0+Date.now())/2}catch{}
+  await load();
+  sb.channel('db').on('postgres_changes',{event:'*',schema:'public',table:'radio_state'},()=>load()).on('postgres_changes',{event:'*',schema:'public',table:'playlist'},()=>load()).subscribe();
+  const pr=sb.channel('presence',{config:{presence:{key:crypto.randomUUID()}}});
+  pr.on('presence',{event:'sync'},()=>{cnt=Object.keys(pr.presenceState()).length;refresh()}).subscribe(s=>{if(s==='SUBSCRIBED')pr.track({role:'listener'})});
+  setInterval(load,30000);
+})();
+
+function render(){
+  const t=st.track,live=st.playing&&t;
+  $('live').textContent=live?'No ar':'Fora do ar';$('live').className='live'+(live?' on':'');
+  $('title').textContent=live?t.title:'Rádio do Clube';
+  $('artist').textContent=live?(t.artist||'Artista desconhecido'):'Aguardando a próxima faixa…';
+  $('src').textContent=live?'Tocando de: '+(KIND[t.kind]||'Link'):'';
+  $('cover').style.backgroundImage=live&&t.cover?`url("${t.cover}")`:'none';
+  $('link').style.display=live&&t.link?'inline-block':'none';if(live&&t.link)$('link').href=t.link;
+  document.title=live?`▶ ${t.title} · Rádio do Clube`:'Rádio do Clube';setFav(!!live);viz();media();
+  $('count').textContent=st.listeners;$('cw').textContent=st.listeners===1?'pessoa ouvindo agora':'pessoas ouvindo agora';
+}
+function stopAll(){au.pause();try{yt&&yt.stopVideo()}catch{};try{spCtl&&spCtl.pause()}catch{};$('sp').style.cssText=''}
+function sync(){
+  const t=st.track;
+  if(!st.playing||!t){stopAll();key=null;return}
+  const k=t.id+':'+st.startedAt;if(k===key)return;
+  stopAll();key=k;
+  if(t.kind==='file'){
+    au.src=t.src;au.volume=vol;au.onloadedmetadata=()=>{if(st.pos<au.duration-2)au.currentTime=st.pos};au.play().catch(()=>{});
+  }else if(t.kind==='youtube'){
+    loadYT(()=>{
+      if(!yt)yt=new YT.Player('yt',{height:1,width:1,videoId:t.ref,playerVars:{autoplay:1,start:st.pos|0},
+        events:{onReady:e=>{e.target.setVolume(vol*100);e.target.playVideo()},onStateChange:e=>e.data===0&&end()}});
+      else{yt.loadVideoById({videoId:t.ref,startSeconds:st.pos|0});yt.setVolume(vol*100)}
+    });
+  }else if(t.kind==='spotify'){
+    loadSP(A=>{
+      $('sp').style.cssText='left:auto;right:16px;bottom:16px;width:300px';
+      if(!spCtl){const el=document.createElement('div');$('sp').appendChild(el);
+        A.createController(el,{uri:t.ref,width:'100%',height:80},c=>{spCtl=c;
+          c.addListener('ready',()=>c.play());
+          c.addListener('playback_update',e=>{const d=e.data;if(d.duration>0&&d.position>=d.duration-1000&&spDone!==key){spDone=key;end()}});});
+      }else{spCtl.loadUri(t.ref);spCtl.play()}
+    });
+  }
+}
+function loadYT(cb){
+  if(window.YT&&YT.Player)return cb();
+  window.onYouTubeIframeAPIReady=cb;const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s);
+}
+function loadSP(cb){
+  if(spApi)return cb(spApi);
+  window.onSpotifyIframeApiReady=A=>{spApi=A;cb(A)};const s=document.createElement('script');s.src='https://open.spotify.com/embed/iframe-api/v1';document.head.appendChild(s);
+}
+$('listen').onclick=()=>{
+  on=!on;$('listen').textContent=on?'Pausar para mim':'Ouvir ao vivo';
+  if(on){key=null;build();sync();burst($('listen'),14)}else{stopAll();key=null}
+  viz();
+};
+function setVol(v){vol=v;au.volume=v;try{yt&&yt.setVolume(v*100)}catch{};try{localStorage.setItem('vol',v)}catch{};$('vol').value=v*100;$('mute').firstChild.style.opacity=v?1:.4}
+$('vol').oninput=e=>setVol(e.target.value/100);
+let lastVol=.8;
+$('mute').onclick=()=>{if(vol){lastVol=vol;setVol(0)}else setVol(lastVol||.8)};
+
+/* ===== extras interativos ===== */
+const eq=$('eq');for(let i=0;i<11;i++){const b=document.createElement('i');b.style.animationDelay=(-Math.random()*.8)+'s';b.style.animationDuration=(.5+Math.random()*.6)+'s';eq.appendChild(b)}
+const isLive=()=>on&&st.playing&&st.track;
+function viz(){const a=!!isLive();eq.classList.toggle('on',a);$('cover').classList.toggle('spin',a);$('listen').textContent=on?'Pausar para mim':'Ouvir ao vivo'}
+
+// favicon dinâmico: bolinha verde quando a rádio está no ar
+const favSvg=l=>'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff4f81"/><stop offset="1" stop-color="#2a4cff"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#g)"/><path d="M14 22a24 24 0 0 1 0 20M50 22a24 24 0 0 0 0 20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/><circle cx="32" cy="32" r="14" fill="none" stroke="#fff" stroke-width="4"/><path d="M28 25l12 7-12 7z" fill="#fff"/>'+(l?'<circle cx="52" cy="12" r="10" fill="#2be37a" stroke="#fff" stroke-width="3"/>':'')+'</svg>';
+let favOn=null;
+function setFav(l){if(l===favOn)return;favOn=l;$('fav').href='data:image/svg+xml,'+encodeURIComponent(favSvg(l))}
+
+// notas musicais voando
+function note(x,y,spread=1){
+  const n=document.createElement('span');n.className='note';n.textContent=['♪','♫','♬','♩'][Math.random()*4|0];
+  n.style.left=x+'px';n.style.top=y+'px';
+  n.style.setProperty('--dx',((Math.random()-.5)*160*spread)+'px');n.style.setProperty('--dy',(-80-Math.random()*120)+'px');n.style.setProperty('--r',((Math.random()-.5)*80)+'deg');
+  document.body.appendChild(n);setTimeout(()=>n.remove(),1700);
+}
+function burst(el,n){const r=el.getBoundingClientRect();for(let i=0;i<n;i++)setTimeout(()=>note(r.left+r.width/2,r.top+r.height/2,1.6),i*40)}
+document.addEventListener('click',e=>{if(!e.target.closest('.card'))for(let i=0;i<3;i++)note(e.clientX,e.clientY)});
+$('cover').addEventListener('click',e=>burst($('cover'),8));
+setInterval(()=>{if(isLive()&&!document.hidden){const r=$('cover').getBoundingClientRect();note(r.left+Math.random()*r.width,r.top+r.height*.3)}},1400);
+
+// inclinação 3D do cartão + parallax dos celulares
+const fine=matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion:reduce)').matches;
+if(fine)document.addEventListener('mousemove',e=>{
+  const x=e.clientX/innerWidth-.5,y=e.clientY/innerHeight-.5;
+  document.querySelector('.card').style.transform=`perspective(900px) rotateY(${x*8}deg) rotateX(${-y*8}deg)`;
+  document.querySelectorAll('.phone').forEach((p,i)=>{p.style.setProperty('--px',(-x*30*(i?-1:1))+'px');p.style.setProperty('--py',(-y*20)+'px')});
+});
+
+// tempo no ar
+const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+setInterval(()=>{const l=st.playing&&st.track;$('time').textContent=l?'Tocando há '+fmt(Math.max(0,(Date.now()+offset-st.startedAt)/1000)):''},1000);
+
+// tela de bloqueio / teclas de mídia
+function media(){
+  if(!('mediaSession' in navigator))return;
+  try{
+    const t=st.track,l=st.playing&&t;
+    navigator.mediaSession.metadata=l?new MediaMetadata({title:t.title,artist:t.artist||'Rádio do Clube',album:'Rádio do Clube',artwork:t.cover?[{src:t.cover}]:[]}):null;
+    navigator.mediaSession.setActionHandler('play',()=>{if(!on)$('listen').click()});
+    navigator.mediaSession.setActionHandler('pause',()=>{if(on)$('listen').click()});
+  }catch{}
+}
+
+// espaço = ouvir/pausar
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&!['INPUT','BUTTON','A'].includes(e.target.tagName)){e.preventDefault();$('listen').click()}
+});
+setVol(vol);
+</script>
+</body>
+</html>
