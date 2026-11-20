@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rádio do Clube</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" id="fav">
+<meta name="theme-color" content="#ff4f81">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0}
@@ -43,6 +45,37 @@ input[type=range]{flex:1;accent-color:#fff}
 .n{margin-top:16px;font-size:15px}
 #sp{position:fixed;left:-9999px;width:300px}
 #yt{position:fixed;left:-9999px;width:1px;height:1px}
+
+/* ===== interatividade ===== */
+.card{transition:transform .25s ease-out;will-change:transform}
+.col b{transition:transform .35s cubic-bezier(.2,.8,.2,1),color .3s,opacity .3s}
+.col:hover b{transform:scale(1.05)}
+.col:hover b.o{color:rgba(255,255,255,.35)}
+.phone.l{transform:translate(var(--px,0px),var(--py,0px)) rotate(-9deg)}
+.phone.r{transform:translate(var(--px,0px),var(--py,0px)) rotate(9deg)}
+.phone{transition:transform .3s ease-out}
+.cover{position:relative;transition:border-radius .8s ease,transform .3s}
+.cover::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#ff4f81;border:3px solid #fff;opacity:0;transition:opacity .6s}
+.cover.spin{border-radius:50%;animation:spin 9s linear infinite}
+.cover.spin::after{opacity:1}
+.cover:active{transform:scale(.96)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.live.on::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border-radius:50%;background:#e8265f;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.7);opacity:.4}}
+.eq{display:flex;gap:4px;height:26px;align-items:flex-end;justify-content:center;margin-top:12px}
+.eq i{width:5px;height:4px;border-radius:3px;background:#fff;opacity:.55;transition:height .3s}
+.eq.on i{opacity:1;animation:eq .8s ease-in-out infinite alternate}
+@keyframes eq{from{height:4px}to{height:26px}}
+.time{margin-top:6px;font-size:13px;opacity:.85;min-height:18px;font-variant-numeric:tabular-nums}
+.btn{transition:transform .15s,box-shadow .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.btn:active{transform:scale(.95)}
+.btn:focus-visible,input[type=range]:focus-visible,#mute:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#mute{background:none;border:0;padding:0;cursor:pointer;display:grid;place-items:center}
+#mute:hover svg{transform:scale(1.2)}#mute svg{transition:transform .15s}
+.note{position:fixed;z-index:10;pointer-events:none;font:600 26px 'Fredoka',sans-serif;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.35);animation:fly 1.6s ease-out forwards}
+@keyframes fly{from{opacity:1;transform:translate(0,0) scale(.6) rotate(0)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.3) rotate(var(--r))}}
+@media(prefers-reduced-motion:reduce){.cover.spin,.eq.on i,.live.on::before,.note{animation:none}.card,.phone{transition:none}}
 @media(max-width:940px){.phone{display:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -56,8 +89,10 @@ input[type=range]{flex:1;accent-color:#fff}
   <h1 id="title">Rádio do Clube</h1>
   <p class="art" id="artist">Aguardando a próxima faixa…</p>
   <p class="src" id="src"></p>
+  <p class="time" id="time"></p>
+  <div class="eq" id="eq" aria-hidden="true"></div>
   <div class="row"><button class="btn" id="listen">Ouvir ao vivo</button><a class="btn s" id="link" target="_blank" rel="noopener" style="display:none">Abrir música</a></div>
-  <div class="vol"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/></svg><input type="range" id="vol" min="0" max="100" value="80" aria-label="Volume"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg></div>
+  <div class="vol"><button id="mute" aria-label="Silenciar"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/></svg></button><input type="range" id="vol" min="0" max="100" value="80" aria-label="Volume"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg></div>
   <p class="n"><b id="count">0</b> <span id="cw">pessoas ouvindo agora</span></p>
 </main>
 <div id="yt"></div><div id="sp"></div>
@@ -97,6 +132,7 @@ function render(){
   $('src').textContent=live?'Tocando de: '+(KIND[t.kind]||'Link'):'';
   $('cover').style.backgroundImage=live&&t.cover?`url("${t.cover}")`:'none';
   $('link').style.display=live&&t.link?'inline-block':'none';if(live&&t.link)$('link').href=t.link;
+  document.title=live?`▶ ${t.title} · Rádio do Clube`:'Rádio do Clube';setFav(!!live);viz();media();
   $('count').textContent=st.listeners;$('cw').textContent=st.listeners===1?'pessoa ouvindo agora':'pessoas ouvindo agora';
 }
 function stopAll(){au.pause();try{yt&&yt.stopVideo()}catch{};try{spCtl&&spCtl.pause()}catch{};$('sp').style.cssText=''}
@@ -134,9 +170,64 @@ function loadSP(cb){
 }
 $('listen').onclick=()=>{
   on=!on;$('listen').textContent=on?'Pausar para mim':'Ouvir ao vivo';
-  if(on){key=null;build();sync()}else{stopAll();key=null}
+  if(on){key=null;build();sync();burst($('listen'),14)}else{stopAll();key=null}
+  viz();
 };
-$('vol').oninput=e=>{vol=e.target.value/100;au.volume=vol;try{yt&&yt.setVolume(vol*100)}catch{};try{localStorage.setItem('vol',vol)}catch{}};
+function setVol(v){vol=v;au.volume=v;try{yt&&yt.setVolume(v*100)}catch{};try{localStorage.setItem('vol',v)}catch{};$('vol').value=v*100;$('mute').firstChild.style.opacity=v?1:.4}
+$('vol').oninput=e=>setVol(e.target.value/100);
+let lastVol=.8;
+$('mute').onclick=()=>{if(vol){lastVol=vol;setVol(0)}else setVol(lastVol||.8)};
+
+/* ===== extras interativos ===== */
+const eq=$('eq');for(let i=0;i<11;i++){const b=document.createElement('i');b.style.animationDelay=(-Math.random()*.8)+'s';b.style.animationDuration=(.5+Math.random()*.6)+'s';eq.appendChild(b)}
+const isLive=()=>on&&st.playing&&st.track;
+function viz(){const a=!!isLive();eq.classList.toggle('on',a);$('cover').classList.toggle('spin',a);$('listen').textContent=on?'Pausar para mim':'Ouvir ao vivo'}
+
+// favicon dinâmico: bolinha verde quando a rádio está no ar
+const favSvg=l=>'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff4f81"/><stop offset="1" stop-color="#2a4cff"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#g)"/><path d="M14 22a24 24 0 0 1 0 20M50 22a24 24 0 0 0 0 20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/><circle cx="32" cy="32" r="14" fill="none" stroke="#fff" stroke-width="4"/><path d="M28 25l12 7-12 7z" fill="#fff"/>'+(l?'<circle cx="52" cy="12" r="10" fill="#2be37a" stroke="#fff" stroke-width="3"/>':'')+'</svg>';
+let favOn=null;
+function setFav(l){if(l===favOn)return;favOn=l;$('fav').href='data:image/svg+xml,'+encodeURIComponent(favSvg(l))}
+
+// notas musicais voando
+function note(x,y,spread=1){
+  const n=document.createElement('span');n.className='note';n.textContent=['♪','♫','♬','♩'][Math.random()*4|0];
+  n.style.left=x+'px';n.style.top=y+'px';
+  n.style.setProperty('--dx',((Math.random()-.5)*160*spread)+'px');n.style.setProperty('--dy',(-80-Math.random()*120)+'px');n.style.setProperty('--r',((Math.random()-.5)*80)+'deg');
+  document.body.appendChild(n);setTimeout(()=>n.remove(),1700);
+}
+function burst(el,n){const r=el.getBoundingClientRect();for(let i=0;i<n;i++)setTimeout(()=>note(r.left+r.width/2,r.top+r.height/2,1.6),i*40)}
+document.addEventListener('click',e=>{if(!e.target.closest('.card'))for(let i=0;i<3;i++)note(e.clientX,e.clientY)});
+$('cover').addEventListener('click',e=>burst($('cover'),8));
+setInterval(()=>{if(isLive()&&!document.hidden){const r=$('cover').getBoundingClientRect();note(r.left+Math.random()*r.width,r.top+r.height*.3)}},1400);
+
+// inclinação 3D do cartão + parallax dos celulares
+const fine=matchMedia('(pointer:fine)').matches&&!matchMedia('(prefers-reduced-motion:reduce)').matches;
+if(fine)document.addEventListener('mousemove',e=>{
+  const x=e.clientX/innerWidth-.5,y=e.clientY/innerHeight-.5;
+  document.querySelector('.card').style.transform=`perspective(900px) rotateY(${x*8}deg) rotateX(${-y*8}deg)`;
+  document.querySelectorAll('.phone').forEach((p,i)=>{p.style.setProperty('--px',(-x*30*(i?-1:1))+'px');p.style.setProperty('--py',(-y*20)+'px')});
+});
+
+// tempo no ar
+const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+setInterval(()=>{const l=st.playing&&st.track;$('time').textContent=l?'Tocando há '+fmt(Math.max(0,(Date.now()+offset-st.startedAt)/1000)):''},1000);
+
+// tela de bloqueio / teclas de mídia
+function media(){
+  if(!('mediaSession' in navigator))return;
+  try{
+    const t=st.track,l=st.playing&&t;
+    navigator.mediaSession.metadata=l?new MediaMetadata({title:t.title,artist:t.artist||'Rádio do Clube',album:'Rádio do Clube',artwork:t.cover?[{src:t.cover}]:[]}):null;
+    navigator.mediaSession.setActionHandler('play',()=>{if(!on)$('listen').click()});
+    navigator.mediaSession.setActionHandler('pause',()=>{if(on)$('listen').click()});
+  }catch{}
+}
+
+// espaço = ouvir/pausar
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&!['INPUT','BUTTON','A'].includes(e.target.tagName)){e.preventDefault();$('listen').click()}
+});
+setVol(vol);
 </script>
 </body>
 </html>
